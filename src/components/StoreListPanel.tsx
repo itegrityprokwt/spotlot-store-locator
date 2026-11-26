@@ -5,6 +5,8 @@ import type { CategoryId, Store } from '../types';
 interface StoreListPanelProps {
   activeCategory: CategoryId;
   stores: Store[];
+  isLoading: boolean;
+  fetchError: string | null;
   selectedStoreId: string | null;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -15,6 +17,8 @@ interface StoreListPanelProps {
 export function StoreListPanel({
   activeCategory,
   stores,
+  isLoading,
+  fetchError,
   selectedStoreId,
   searchQuery,
   onSearchChange,
@@ -79,6 +83,21 @@ export function StoreListPanel({
             <p className="empty-state__subtitle">
               No locations available yet. This category will be added soon.
             </p>
+          </div>
+        ) : isLoading ? (
+          <div className="empty-state">
+            <div className="empty-state__icon-wrap">
+              <ShoppingCart size={26} strokeWidth={1.75} />
+            </div>
+            <p className="empty-state__title">Loading stores…</p>
+          </div>
+        ) : fetchError ? (
+          <div className="empty-state">
+            <div className="empty-state__icon-wrap">
+              <ShoppingCart size={26} strokeWidth={1.75} />
+            </div>
+            <p className="empty-state__title">Unable to load stores</p>
+            <p className="empty-state__subtitle">{fetchError}</p>
           </div>
         ) : stores.length === 0 ? (
           <div className="empty-state">

@@ -1,6 +1,6 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { GROCERY_STORES } from './data/stores';
+import { fetchBranches } from './data/stores';
 import type { CategoryId, LayoutMode, Store } from './types';
 import { StoreListPanel } from './components/StoreListPanel';
 import { StoreMap } from './components/StoreMap';
@@ -9,26 +9,49 @@ export function App() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>('grocery');
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('split');
   const [searchQuery, setSearchQuery] = useState('');
+  const [stores, setStores] = useState<Store[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [flyToTrigger, setFlyToTrigger] = useState<{ store: Store; seq: number } | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchBranches(controller.signal)
+      .then((loadedStores) => {
+        setStores(loadedStores);
+        setFetchError(null);
+        setIsLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setFetchError(err instanceof Error ? err.message : 'Failed to load stores');
+        setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, []);
 
   const filteredStores = useMemo(() => {
     if (activeCategory !== 'grocery') return [];
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return GROCERY_STORES;
+    if (!q) return stores;
 
-    return GROCERY_STORES.filter(
+    return stores.filter(
       (store) =>
         store.name.toLowerCase().includes(q) ||
         store.city.toLowerCase().includes(q) ||
         store.company.toLowerCase().includes(q) ||
         store.address.toLowerCase().includes(q)
     );
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, stores]);
 
   const handleSelectStore = useCallback((store: Store) => {
     setSelectedStoreId(store.id);
-    setFlyToTrigger((prev) => ({ store, seq: (prev?.seq ?? 0) + 1 }));
+    if (store.hasValidCoords) {
+      setFlyToTrigger((prev) => ({ store, seq: (prev?.seq ?? 0) + 1 }));
+    }
   }, []);
 
   const handleCategoryChange = useCallback((category: CategoryId) => {
@@ -44,6 +67,8 @@ export function App() {
         <StoreListPanel
           activeCategory={activeCategory}
           stores={filteredStores}
+          isLoading={isLoading}
+          fetchError={fetchError}
           selectedStoreId={selectedStoreId}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}

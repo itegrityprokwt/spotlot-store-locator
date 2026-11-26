@@ -375,7 +375,8 @@ export function StoreMap({
     const map = mapRef.current;
     if (!map) return;
 
-    const visibleStores = activeCategory === 'grocery' ? stores : [];
+    const visibleStores =
+      activeCategory === 'grocery' ? stores.filter((s) => s.hasValidCoords) : [];
     const visibleIds = new Set(visibleStores.map((s) => s.id));
 
     // Remove markers that are no longer visible
@@ -424,7 +425,7 @@ export function StoreMap({
   // Smoothly fly/center when a store is selected from the list or pin
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !flyToTrigger) return;
+    if (!map || !flyToTrigger || !flyToTrigger.store.hasValidCoords) return;
 
     map.flyTo({
       center: [flyToTrigger.store.lng, flyToTrigger.store.lat],
